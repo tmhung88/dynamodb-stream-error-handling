@@ -6,4 +6,6 @@ import lombok.Value;
 public class GreetingInput {
 
   String name;
+
+  int dividend;
 }

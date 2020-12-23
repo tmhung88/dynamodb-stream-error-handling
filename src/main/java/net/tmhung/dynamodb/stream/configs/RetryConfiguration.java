@@ -9,16 +9,22 @@ import java.time.Duration;
 import javax.enterprise.context.Dependent;
 import javax.enterprise.inject.Produces;
 import javax.inject.Singleton;
+import lombok.extern.jbosslog.JBossLog;
+import net.tmhung.dynamodb.stream.exceptions.ExternalServiceTimeoutException;
+import net.tmhung.dynamodb.stream.exceptions.InconsistentDataException;
 
 @Dependent
+@JBossLog
 public class RetryConfiguration {
 
   @Produces
   @Singleton
   public RetryConfig retryConfig() {
     return RetryConfig.custom()
-        .maxAttempts(3)
+        .maxAttempts(6)
         .waitDuration(Duration.of(1, SECONDS))
+        .retryExceptions(ExternalServiceTimeoutException.class)
+        .ignoreExceptions(InconsistentDataException.class)
         .build();
   }
 

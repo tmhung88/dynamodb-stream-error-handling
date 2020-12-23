@@ -19,7 +19,7 @@ public class GreetingLambda implements RequestHandler<GreetingInput, GreetingOut
 
   @Override
   public GreetingOutput handleRequest(GreetingInput input, Context context) {
-    Supplier<String> greetingSupplier = () -> greetingService.greeting(input.getName());
+    Supplier<String> greetingSupplier = () -> greetingService.greeting(input.getName(), input.getDividend());
     Supplier<String> retryGreetingSupplier = Retry.decorateSupplier(defaultRetry, greetingSupplier);
     String result = retryGreetingSupplier.get();
     return new GreetingOutput(result);
