@@ -1,5 +1,7 @@
 package net.tmhung.dynamodb.stream.services;
 
+import com.amazonaws.services.lambda.runtime.events.DynamodbEvent;
+import com.amazonaws.services.lambda.runtime.events.DynamodbEvent.DynamodbStreamRecord;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.retry.Retry;
@@ -23,23 +25,29 @@ public class DynamoDbStreamService {
   private final ObjectMapper objectMapper;
   private final UrlsConfiguration urls;
 
-  public <T> Optional<Void> execute(Consumer<T> handler, T input) {
-    Function<T, Optional<Void>> enhancedFunction = Retry.decorateFunction(defaultRetry, (arguments) -> {
-      handler.accept(arguments);
-      return Optional.empty();
-    });
+  public Optional<Void> executeEvent(Consumer<DynamodbStreamRecord> handler, DynamodbEvent input) {
+    Function<DynamodbStreamRecord, Optional<Void>> enhancedFunction = Retry
+        .decorateFunction(defaultRetry, (record) -> {
+          handler.accept(record);
+          return Optional.empty();
+        });
+    input.getRecords().forEach(record -> this.executeRecord(enhancedFunction, record));
+    return Optional.empty();
+  }
+
+  private void executeRecord(Function<DynamodbStreamRecord, Optional<Void>> enhancedFunction,
+      DynamodbStreamRecord record) {
     try {
-      enhancedFunction.apply(input);
+      enhancedFunction.apply(record);
     } catch (Exception ex) {
       try {
-        String messageBody = objectMapper.writeValueAsString(input);
+        String messageBody = objectMapper.writeValueAsString(record);
         SqsResponse response = sqsClient
             .sendMessage(m -> m.queueUrl(urls.getDeadLetterQueue()).messageBody(messageBody));
         log.infof(ex, "Placed a failed record into SQS [%s]", response.toString());
       } catch (JsonProcessingException e) {
-        log.warnf("Unable to place a failed record into SQS: [%s]", input);
+        log.warnf("Unable to place a failed record into SQS: [%s]", record);
       }
     }
-    return Optional.empty();
   }
 }

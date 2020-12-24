@@ -2,6 +2,7 @@ package net.tmhung.dynamodb.stream.lambdas;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.DynamodbEvent;
 import java.util.Optional;
 import javax.inject.Named;
 import lombok.AllArgsConstructor;
@@ -12,13 +13,13 @@ import net.tmhung.dynamodb.stream.services.GreetingService;
 @Named("greetingLambda")
 @JBossLog
 @AllArgsConstructor
-public class GreetingLambda implements RequestHandler<GreetingInput, Optional<Void>> {
+public class GreetingLambda implements RequestHandler<DynamodbEvent, Optional<Void>> {
 
   private final GreetingService greetingService;
   private final DynamoDbStreamService streamService;
 
   @Override
-  public Optional<Void> handleRequest(GreetingInput input, Context context) {
-    return streamService.execute(greetingService::greeting, input);
+  public Optional<Void> handleRequest(DynamodbEvent event, Context context) {
+    return streamService.executeEvent(greetingService::handleStreamRecord, event);
   }
 }

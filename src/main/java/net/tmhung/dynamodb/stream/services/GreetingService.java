@@ -1,12 +1,12 @@
 package net.tmhung.dynamodb.stream.services;
 
+import com.amazonaws.services.lambda.runtime.events.DynamodbEvent.DynamodbStreamRecord;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.enterprise.context.ApplicationScoped;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.jbosslog.JBossLog;
 import net.tmhung.dynamodb.stream.exceptions.ExternalServiceTimeoutException;
 import net.tmhung.dynamodb.stream.exceptions.InconsistentDataException;
-import net.tmhung.dynamodb.stream.lambdas.GreetingInput;
 
 @JBossLog
 @ApplicationScoped
@@ -17,19 +17,31 @@ public class GreetingService {
     return ThreadLocalRandom.current().nextInt(0, 1000000);
   }
 
-  public void greeting(GreetingInput input) {
-    log.infof("Input [%s]", input);
-    if ("permanent".equals(input.getName().trim().toLowerCase())) {
+  public void handleStreamRecord(DynamodbStreamRecord record) {
+    log.infof("Input record [%s]", record);
+    if (!"INSERT".equals(record.getEventName())) {
+      return;
+    }
+    var newItem = record.getDynamodb().getNewImage();
+    var parts = newItem.get("name").getS().split("-");
+    var name = parts[0];
+    var dividend = parts.length > 1 ? Integer.parseInt(parts[1]) : 1;
+    greeting(name, dividend);
+  }
+
+  private void greeting(String name, int dividend) {
+    log.infof("Input [%s, %s]", name, dividend);
+    if ("permanent".equals(name.trim().toLowerCase())) {
       throw new InconsistentDataException();
     }
 
-    int randomNumber = randomNumber();
-    int remainder = randomNumber % input.getDividend();
+    var randomNumber = randomNumber();
+    var remainder = randomNumber % dividend;
     log.debugf("RandomNumber %s | Remainder %s", randomNumber, remainder);
-    if ("transient".equals(input.getName().trim().toLowerCase()) && remainder != 0) {
+    if ("transient".equals(name.trim().toLowerCase()) && remainder != 0) {
       throw new ExternalServiceTimeoutException();
     }
 
-    log.infof("Successfully processed input [%s]", input);
+    log.infof("Successfully processed input [%s, %s]", name, dividend);
   }
 }
