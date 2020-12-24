@@ -23,9 +23,12 @@ dependencies {
     implementation("io.github.resilience4j:resilience4j-bulkhead:${resilience4jVersion}")
     implementation("io.github.resilience4j:resilience4j-cache:${resilience4jVersion}")
     implementation("io.github.resilience4j:resilience4j-timelimiter:${resilience4jVersion}")
+    implementation("software.amazon.awssdk:url-connection-client")
+    implementation("software.amazon.awssdk:apache-client")
 
     implementation(enforcedPlatform("io.quarkus:quarkus-universe-bom:${quarkusVersion}"))
     implementation("io.quarkus:quarkus-resteasy")
     implementation("io.quarkus:quarkus-amazon-lambda")
     implementation("io.quarkus:quarkus-amazon-dynamodb")
+    implementation("io.quarkus:quarkus-amazon-sqs")
 }
