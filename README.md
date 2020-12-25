@@ -1,37 +1,37 @@
-## Requirements
+## Introduction
+DynamoDB stream is a powerful service which is employed in various scenarios: roll-up aggregations, enforcing data
+ consistency, ... However, it's not clear how to correctly handle errors during stream processing. If it's done
+  wrongly, a lambda can get stuck in an infinite loop or lose stream records. A good design pattern must address
+   these problems and make the stream processing more fault tolerant. 
 
-- MacOS or a Linux distro to run deployment scripts (Windows not supported)
-- Java SDK 11 
-- AWS credentials set up in ~/.aws/credentials
-- AWS region set up in ~/.aws/config
-- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
+## Solution
+A lambda must catch all kinds of exceptions to prevent a DynamoDb stream from delivering the same batch repeatedly. At
+ the same time, a flexible retry mechanism is implemented to provide retry for transient errors. Eventually, failed
+  records due to unexpected errors should be placed into SQS for later investigation or routing
+  to another lambda.
 
+## Demo
+The demo is implemented with Java 11. AWS service development is done with [Quarkus](http://quarkus.io/). In addition
+, it employs
+ [resilience4j-retry](https://resilience4j.readme.io/docs/retry) to provide different retry strategies.
+ 
+#### Requirements:
+- Java 11
+- A SQS Queue
+- A DynamoDB table with a single column `id: string` which is also a partition key
+- An AWS Lambda with a Java-11 runtime
+- An IAM role for the lambda to receive events from the DynamoDB stream and places messages into the SQS queue
 
-## Setup
-
-- Create an IAM role for the lambda. It's named as `greeting-lambda-role`
-```shell script
-aws iam create-role --role-name greeting-lambda-role --assume-role-policy-document file://lambda-role-policy.json
+#### How to run:
+1. Add an environment variable for the lambda
 ```
-
-- Set the role ARN from #1 into the environment variable for the deployment script
-```shell script
-export LAMBDA_ROLE_ARN="<ROLE ARN VALUE>"
-## example: export LAMBDA_ROLE_ARN="arn:aws:iam::748520250836:role/greeting-lambda-role"
+URLS_DEAD_LETTER_QUEUE=<SQS Queue URL>
 ```
-
-## How to:
-
-Please finish the IAM role setup first before you build and deploy the lambda. Supposed your region is `us-east-1
-`, after the deployment, you can find your lambda [here](https://console.aws.amazon.com/lambda/home?region=us-east-1#/functions/DynamostreamErrorHandling?tab=configuration) 
-
-1. Under the root project directory, build the project
+2. Go to the root project directory, build a lambda
 ```shell script
 ./gradle clean quarkusBuild
 ```
-
-2. To create or update the lambda, run this command which creates a lambda named `DynamostreamErrorHandling`
-```shell script
-./build/manage.sh delete create
-```
-
+3. Find `function.zip` file in the `./build` directory and upload it into your lambda
+4. Update `aws-region` and `table-name` in the `scripts/index.js`, run the script to trigger the lambda
+5. After the script is executed completely, there should be 2 failed messages in the SQS queue. They are 2 failed
+ records from a batch that the script has generated

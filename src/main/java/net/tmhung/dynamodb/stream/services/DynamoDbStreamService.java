@@ -11,10 +11,14 @@ import java.util.function.Function;
 import javax.enterprise.context.ApplicationScoped;
 import lombok.AllArgsConstructor;
 import lombok.extern.jbosslog.JBossLog;
+import net.tmhung.dynamodb.stream.configs.RetryConfiguration;
 import net.tmhung.dynamodb.stream.configs.UrlsConfiguration;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.SqsResponse;
 
+/**
+ * A utility service that enables other services to handle DynamoDB stream to be more fault tolerance
+ */
 @JBossLog
 @ApplicationScoped
 @AllArgsConstructor
@@ -25,6 +29,15 @@ public class DynamoDbStreamService {
   private final ObjectMapper objectMapper;
   private final UrlsConfiguration urls;
 
+  /**
+   * Execute a single-record handler against a dynamodb event of stream records. The method always return successfully.
+   * All unexpected exception are either retried or have failed records placed into a SQS queue. <br/> For retry
+   * configuration, please look into {@link RetryConfiguration}
+   *
+   * @param handler a handler that processes an individual a DynamoDB stream record
+   * @param input   a DynamoDB event or a batch of stream records
+   * @return an empty value which indicates the event is processed successfully
+   */
   public Optional<Void> executeEvent(Consumer<DynamodbStreamRecord> handler, DynamodbEvent input) {
     Function<DynamodbStreamRecord, Optional<Void>> enhancedFunction = Retry
         .decorateFunction(defaultRetry, (record) -> {

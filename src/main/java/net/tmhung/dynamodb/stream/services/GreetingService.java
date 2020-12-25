@@ -8,6 +8,9 @@ import lombok.extern.jbosslog.JBossLog;
 import net.tmhung.dynamodb.stream.exceptions.ExternalServiceTimeoutException;
 import net.tmhung.dynamodb.stream.exceptions.InconsistentDataException;
 
+/**
+ * A simple business service that produces real-life scenarios where exceptions are thrown during request processing
+ */
 @JBossLog
 @ApplicationScoped
 @RequiredArgsConstructor

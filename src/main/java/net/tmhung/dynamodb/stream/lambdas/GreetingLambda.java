@@ -10,6 +10,9 @@ import lombok.extern.jbosslog.JBossLog;
 import net.tmhung.dynamodb.stream.services.DynamoDbStreamService;
 import net.tmhung.dynamodb.stream.services.GreetingService;
 
+/**
+ * A simple lambda that is triggered by a DynamoDB stream
+ */
 @Named("greetingLambda")
 @JBossLog
 @AllArgsConstructor
